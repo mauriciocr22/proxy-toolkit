@@ -51,3 +51,11 @@ export interface CompAnalysis {
   analysis: string
   bangbooId: string
 }
+
+export interface BuildAnalysis {
+  recommendation: string
+  wEngineId: string
+  altWEngineId: string
+  discSetId: string
+  altDiscSetId: string
+}

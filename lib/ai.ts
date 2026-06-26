@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk"
-import type { Agent, Bangboo, CompAnalysis } from "@/types/zzz"
+import type { Agent, Bangboo, CompAnalysis, WEngine, DiscSet, BuildAnalysis } from "@/types/zzz"
 
 const client = new Anthropic()
 
@@ -16,11 +16,16 @@ The "bangbooId" must be one of the IDs from the bangboo list the user provides. 
 
 const BUILD_SYSTEM_PROMPT = `
 You are a Zenless Zone Zero build expert.
-For the provided agent, recommend in Brazilian Portuguese:
-- Main W-Engine and a free/accessible alternative
-- Main disc set and an alternative
-- Priority stats per slot
-Be concise. Maximum 250 words.
+Respond ONLY with valid JSON (no markdown, no extra text):
+{
+  "recommendation": "...",
+  "wEngineId": "...",
+  "altWEngineId": "...",
+  "discSetId": "...",
+  "altDiscSetId": "..."
+}
+The "recommendation" field must be in Brazilian Portuguese: explain the main W-Engine choice, the accessible alternative, the main disc set, the alternative disc set, and priority stats per slot. Maximum 250 words.
+All IDs must come from the provided lists. Pick W-Engines suited to the agent's specialty. If no list is provided, use empty strings.
 `
 
 type AgentSummary = Pick<Agent, "name" | "element" | "specialty" | "faction" | "rarity">
@@ -53,23 +58,41 @@ export async function getCompSuggestion(agents: Agent[], bangboos: Bangboo[]): P
   }
 }
 
-export async function getBuildSuggestion(agent: Agent): Promise<string> {
-  const summary: AgentSummary = {
-    name: agent.name,
-    element: agent.element,
-    specialty: agent.specialty,
-    faction: agent.faction,
-    rarity: agent.rarity,
+export async function getBuildSuggestion(
+  agent: Agent,
+  wEngines: WEngine[],
+  discSets: DiscSet[],
+): Promise<BuildAnalysis> {
+  const payload = {
+    agent: {
+      name: agent.name,
+      element: agent.element,
+      specialty: agent.specialty,
+      faction: agent.faction,
+      rarity: agent.rarity,
+    },
+    wEngines: wEngines.map(({ id, name, specialty, rarity }) => ({ id, name, specialty, rarity })),
+    discSets: discSets.map(({ id, name, twoPieceBonus, fourPieceBonus }) => ({
+      id, name, twoPieceBonus, fourPieceBonus,
+    })),
   }
 
   const msg = await client.messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 1024,
     system: BUILD_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: JSON.stringify(summary) }],
+    messages: [{ role: "user", content: JSON.stringify(payload) }],
   })
 
   const block = msg.content[0]
   if (block.type !== "text") throw new Error("Unexpected response type")
-  return block.text
+
+  const parsed = JSON.parse(block.text) as Partial<BuildAnalysis>
+  return {
+    recommendation: parsed.recommendation ?? block.text,
+    wEngineId: parsed.wEngineId ?? "",
+    altWEngineId: parsed.altWEngineId ?? "",
+    discSetId: parsed.discSetId ?? "",
+    altDiscSetId: parsed.altDiscSetId ?? "",
+  }
 }
