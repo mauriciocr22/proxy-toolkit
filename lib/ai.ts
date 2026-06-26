@@ -1,7 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk"
+import { GoogleGenAI } from "@google/genai"
 import type { Agent, Bangboo, CompAnalysis, WEngine, DiscSet, BuildAnalysis } from "@/types/zzz"
 
-const client = new Anthropic()
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
 const COMP_SYSTEM_PROMPT = `
 You are a Zenless Zone Zero expert.
@@ -41,19 +41,16 @@ export async function getCompSuggestion(agents: Agent[], bangboos: Bangboo[]): P
     })),
   }
 
-  const msg = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1024,
-    system: COMP_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: JSON.stringify(payload) }],
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: JSON.stringify(payload),
+    config: { systemInstruction: COMP_SYSTEM_PROMPT },
   })
 
-  const block = msg.content[0]
-  if (block.type !== "text") throw new Error("Unexpected response type")
-
-  const parsed = JSON.parse(block.text) as { analysis?: string; bangbooId?: string }
+  const text = response.text ?? ""
+  const parsed = JSON.parse(text) as { analysis?: string; bangbooId?: string }
   return {
-    analysis: parsed.analysis ?? block.text,
+    analysis: parsed.analysis ?? text,
     bangbooId: parsed.bangbooId ?? "",
   }
 }
@@ -77,19 +74,16 @@ export async function getBuildSuggestion(
     })),
   }
 
-  const msg = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1024,
-    system: BUILD_SYSTEM_PROMPT,
-    messages: [{ role: "user", content: JSON.stringify(payload) }],
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: JSON.stringify(payload),
+    config: { systemInstruction: BUILD_SYSTEM_PROMPT },
   })
 
-  const block = msg.content[0]
-  if (block.type !== "text") throw new Error("Unexpected response type")
-
-  const parsed = JSON.parse(block.text) as Partial<BuildAnalysis>
+  const text = response.text ?? ""
+  const parsed = JSON.parse(text) as Partial<BuildAnalysis>
   return {
-    recommendation: parsed.recommendation ?? block.text,
+    recommendation: parsed.recommendation ?? text,
     wEngineId: parsed.wEngineId ?? "",
     altWEngineId: parsed.altWEngineId ?? "",
     discSetId: parsed.discSetId ?? "",

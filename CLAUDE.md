@@ -11,8 +11,8 @@ Companion app for Zenless Zone Zero. Allows players to manage their agent roster
 - **Framework:** Next.js 15 (App Router)
 - **UI:** React 19 + Tailwind CSS v4
 - **Language:** TypeScript (strict mode)
-- **Game data:** hakush.in API (REST, no authentication required)
-- **AI:** Anthropic Claude API (`claude-sonnet-4-6`)
+- **Game data:** static.nanoka.cc (REST, no authentication required)
+- **AI:** Google Gemini API (`gemini-2.5-flash`)
 - **Persistence:** localStorage (client-side only, no backend)
 - **Deploy:** Vercel
 
@@ -40,7 +40,7 @@ proxy-toolkit/
 ├── lib/
 │   ├── hakushin.ts              # hakush.in API client (fetch + cache)
 │   ├── storage.ts               # Typed localStorage helpers
-│   └── ai.ts                    # Claude API calls (comp + build)
+│   └── ai.ts                    # Gemini API calls (comp + build)
 ├── hooks/
 │   ├── useRoster.ts             # Read/write roster to localStorage
 │   └── useComp.ts               # Comp-in-progress state
