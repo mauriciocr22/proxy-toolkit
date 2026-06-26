@@ -1,1 +1,276 @@
 @AGENTS.md
+
+# Proxy Toolkit
+
+Companion app for Zenless Zone Zero. Allows players to manage their agent roster, build comps with AI suggestions, get per-agent build recommendations, and find the best Bangboo for each comp.
+
+---
+
+## Stack
+
+- **Framework:** Next.js 15 (App Router)
+- **UI:** React 19 + Tailwind CSS v4
+- **Language:** TypeScript (strict mode)
+- **Game data:** hakush.in API (REST, no authentication required)
+- **AI:** Anthropic Claude API (`claude-sonnet-4-6`)
+- **Persistence:** localStorage (client-side only, no backend)
+- **Deploy:** Vercel
+
+---
+
+## Folder Structure
+
+```
+proxy-toolkit/
+├── app/
+│   ├── layout.tsx               # Global layout with nav
+│   ├── page.tsx                 # Home → redirects to Roster
+│   ├── roster/
+│   │   └── page.tsx             # Manage agents the user owns
+│   ├── comp-builder/
+│   │   └── page.tsx             # Build comp + AI suggestion + Bangboo
+│   └── agent/
+│       └── [id]/
+│           └── page.tsx         # Per-agent build recommender
+├── components/
+│   ├── ui/                      # Reusable components (Button, Card, Badge, Modal)
+│   ├── roster/                  # AgentCard, AgentGrid, AgentSelector
+│   ├── comp-builder/            # CompSlot, CompResult, BangbooCard
+│   └── agent/                   # BuildCard, DiscSetCard, WEngineCard
+├── lib/
+│   ├── hakushin.ts              # hakush.in API client (fetch + cache)
+│   ├── storage.ts               # Typed localStorage helpers
+│   └── ai.ts                    # Claude API calls (comp + build)
+├── hooks/
+│   ├── useRoster.ts             # Read/write roster to localStorage
+│   └── useComp.ts               # Comp-in-progress state
+├── types/
+│   └── zzz.ts                   # All ZZZ domain types
+└── public/
+    └── (static assets if needed)
+```
+
+---
+
+## Code Conventions
+
+- **Components:** PascalCase, one per file, single responsibility
+- **Functions and variables:** camelCase
+- **Types and interfaces:** PascalCase, always in `/types/zzz.ts`
+- **No logic in JSX:** extract to hooks or utility functions in `lib/`
+- **No `any`:** always use explicit types
+- **Absolute imports:** use `@/` as alias for the project root
+
+---
+
+## Commit Convention
+
+Follow conventional commits. **Never mention AI, Claude, or any AI tooling in commit messages.**
+
+Format: `type(scope): short description`
+
+Allowed types:
+- `feat`: new feature
+- `fix`: bug fix
+- `refactor`: refactor without behavior change
+- `style`: formatting, no logic change
+- `chore`: config, dependencies, project files
+- `docs`: documentation
+
+Examples:
+- `feat(roster): add agent filtering by element`
+- `fix(comp-builder): fix synergy calculation when swapping agents`
+- `refactor(storage): extract localStorage helpers into dedicated module`
+- `chore: add environment variables example file`
+
+Rules:
+- Description in English, imperative mood, no trailing period
+- Maximum 72 characters on the first line
+- Never include "Generated", "AI-assisted", "Claude", "Copilot" or similar
+
+---
+
+## Design System
+
+### Color Palette
+
+```css
+/* Background */
+--bg-base: #0a0a0f;
+--bg-card: #13131a;
+--bg-elevated: #1c1c27;
+
+/* ZZZ Accent */
+--accent-yellow: #f5c400;
+--accent-yellow-dim: #a88500;
+
+/* Secondary neon */
+--accent-cyan: #00e5ff;
+--accent-cyan-dim: #0099aa;
+
+/* Text */
+--text-primary: #ffffff;
+--text-secondary: #9999aa;
+--text-muted: #555566;
+
+/* Borders */
+--border: #2a2a3a;
+--border-accent: #f5c400;
+
+/* Rarity */
+--rarity-s: #f5a623;
+--rarity-a: #9b59b6;
+```
+
+### Visual Guidelines
+
+- Main background: near-black with a slight purple/blue tint (`#0a0a0f`)
+- Cards with subtle border (`border border-[--border]`) and `rounded-xl`
+- S-rank agents with golden border (`border-[--accent-yellow]`)
+- Primary buttons: ZZZ yellow background with black text
+- Use `backdrop-blur` and slight transparency on overlays
+- Typography: Tailwind default system font stack, no external fonts for now
+
+---
+
+## Core Types
+
+```typescript
+// types/zzz.ts
+
+export interface Agent {
+  id: string
+  name: string
+  element: 'Fire' | 'Ice' | 'Electric' | 'Physical' | 'Ether'
+  specialty: 'Attack' | 'Stun' | 'Anomaly' | 'Support' | 'Defense'
+  faction: string
+  rarity: 'S' | 'A'
+  iconUrl: string
+}
+
+export interface RosterAgent {
+  agentId: string
+  level: number          // 1–60
+  mindscape: number      // 0–6 (equivalent to constellation)
+  coreSkill: string      // 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+}
+
+export interface WEngine {
+  id: string
+  name: string
+  specialty: string
+  rarity: 'S' | 'A' | 'B'
+  description: string
+}
+
+export interface DiscSet {
+  id: string
+  name: string
+  twoPieceBonus: string
+  fourPieceBonus: string
+}
+
+export interface Bangboo {
+  id: string
+  name: string
+  rarity: 'S' | 'A'
+  description: string
+  iconUrl: string
+}
+
+export interface SavedComp {
+  id: string
+  name: string
+  agentIds: string[]      // always 3
+  bangbooId: string
+  aiSuggestion: string    // text generated by AI
+  createdAt: string       // ISO string
+}
+```
+
+---
+
+## localStorage Schema
+
+```typescript
+// lib/storage.ts manages these keys:
+
+"proxy-toolkit:roster"      // RosterAgent[]
+"proxy-toolkit:saved-comps" // SavedComp[]
+```
+
+Always read and write via typed helpers in `lib/storage.ts`. Never access `localStorage` directly in components.
+
+---
+
+## hakush.in API
+
+Base URL: `https://api.hakush.in/zzz`
+
+Expected endpoints:
+- `GET /character` — list all agents
+- `GET /character/{id}` — single agent details
+- `GET /weapon` — list all w-engines
+- `GET /equipment` — list all disc sets
+- `GET /bangboo` — list all bangboos
+
+All game data fetches must go through `lib/hakushin.ts`. Use `next: { revalidate: 3600 }` on fetches (revalidates every hour). Cache at module level to avoid duplicate calls in the same session.
+
+---
+
+## Claude API — Prompts
+
+### Comp suggestion + Bangboo
+
+```typescript
+// lib/ai.ts
+// Input: 3 selected agents with full data
+// Output: synergy analysis, each agent's role, recommended Bangboo and alternative, rotation tips
+
+const COMP_SYSTEM_PROMPT = `
+You are a Zenless Zone Zero expert.
+Analyze the provided agent composition and respond in Brazilian Portuguese.
+Explain the comp's synergy, each agent's role, the ideal Bangboo, and a basic rotation.
+Be direct and practical. Maximum 300 words.
+`
+```
+
+### Per-agent build recommender
+
+```typescript
+// Input: full agent data
+// Output: main W-Engine and alternative, recommended disc sets, priority stats
+
+const BUILD_SYSTEM_PROMPT = `
+You are a Zenless Zone Zero build expert.
+For the provided agent, recommend in Brazilian Portuguese:
+- Main W-Engine and a free/accessible alternative
+- Main disc set and an alternative
+- Priority stats per slot
+Be concise. Maximum 250 words.
+`
+```
+
+---
+
+## Out of Scope
+
+- Damage calculator with exact formulas
+- User login or accounts
+- HoYoLAB integration to auto-import roster
+- Agent tier list
+- Pull/gacha tracker
+
+---
+
+## Implementation Order
+
+1. Project setup: Next.js + Tailwind + TypeScript
+2. `lib/hakushin.ts` — fetch and cache game data from API
+3. `types/zzz.ts` — all domain types
+4. `lib/storage.ts` — localStorage helpers
+5. Roster page — display agents, mark as owned
+6. Comp Builder page — select 3 agents + call AI
+7. Bangboo recommendation — integrated into comp result
+8. Agent page — per-agent build recommender
+9. Visual polish and responsiveness
