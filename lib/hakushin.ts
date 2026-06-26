@@ -96,6 +96,20 @@ const SPECIALTY_MAP: Record<number, Agent["specialty"]> = {
   3: "Anomaly",
   4: "Support",
   5: "Defense",
+  6: "Support",
+}
+
+// camp IDs from the static data mapped to in-game faction names.
+// Camps 3 and 4 are both Sons of Calydon sub-factions; Bangboo synergy treats them identically.
+const FACTION_MAP: Record<number, string> = {
+  1: "Cunning Hares",
+  2: "Victoria Housekeeping",
+  3: "Sons of Calydon",
+  4: "Sons of Calydon",
+  5: "Obol Squad",
+  6: "Section 6",
+  7: "Criminal Investigation Special Response Team",
+  8: "G.A.T.E.",
 }
 
 function mapElement(code: number): Agent["element"] {
@@ -124,7 +138,7 @@ export async function getAgents(): Promise<Agent[]> {
     name: char.en,
     element: mapElement(char.element),
     specialty: mapSpecialty(char.type),
-    faction: "",
+    faction: FACTION_MAP[char.camp] ?? "",
     rarity: mapRarity(char.rank),
     iconUrl: iconUrl(char.icon),
   }))
@@ -140,7 +154,7 @@ export async function getAgent(id: string): Promise<Agent | null> {
       name: char.en,
       element: mapElement(char.element),
       specialty: mapSpecialty(char.type),
-      faction: "",
+      faction: FACTION_MAP[char.camp] ?? "",
       rarity: mapRarity(char.rank),
       iconUrl: iconUrl(char.icon),
     }
