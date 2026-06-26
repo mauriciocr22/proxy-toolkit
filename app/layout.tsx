@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { NavLinks } from "@/components/ui/NavLinks"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -27,22 +28,7 @@ export default function RootLayout({
             >
               Proxy Toolkit
             </Link>
-            <div className="flex items-center gap-6 text-sm">
-              <Link
-                href="/roster"
-                className="transition-colors hover:text-white"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                Roster
-              </Link>
-              <Link
-                href="/comp-builder"
-                className="transition-colors hover:text-white"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                Comp Builder
-              </Link>
-            </div>
+            <NavLinks />
           </nav>
         </header>
         <main className="flex-1">{children}</main>

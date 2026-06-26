@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getAgent, getWEngines, getDiscSets } from "@/lib/hakushin"
 import { AgentBuildClient } from "@/components/agent/AgentBuildClient"
@@ -38,6 +39,14 @@ export default async function AgentPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
+      <Link
+        href="/roster"
+        className="mb-6 inline-flex items-center gap-1.5 text-sm transition-colors hover:text-white"
+        style={{ color: "var(--text-secondary)" }}
+      >
+        ← Roster
+      </Link>
+
       {/* Agent header */}
       <div
         className="mb-8 flex items-center gap-6 rounded-xl border-2 p-6"
@@ -47,7 +56,7 @@ export default async function AgentPage({ params }: PageProps) {
         }}
       >
         <div
-          className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-xl"
+          className="h-24 w-24 shrink-0 overflow-hidden rounded-xl"
           style={{ backgroundColor: "var(--bg-base)" }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
