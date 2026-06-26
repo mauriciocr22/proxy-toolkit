@@ -1,9 +1,11 @@
 "use server"
 
 import { getCompSuggestion } from "@/lib/ai"
-import type { Agent } from "@/types/zzz"
+import { getBangboos } from "@/lib/hakushin"
+import type { Agent, CompAnalysis } from "@/types/zzz"
 
-export async function analyzeComp(agents: Agent[]): Promise<string> {
+export async function analyzeComp(agents: Agent[]): Promise<CompAnalysis> {
   if (agents.length !== 3) throw new Error("Exactly 3 agents required")
-  return getCompSuggestion(agents)
+  const bangboos = await getBangboos().catch(() => [])
+  return getCompSuggestion(agents, bangboos)
 }

@@ -1,4 +1,4 @@
-import { getAgents } from "@/lib/hakushin"
+import { getAgents, getBangboos } from "@/lib/hakushin"
 import { CompBuilder } from "@/components/comp-builder/CompBuilder"
 
 export const metadata = {
@@ -6,7 +6,10 @@ export const metadata = {
 }
 
 export default async function CompBuilderPage() {
-  const agents = await getAgents().catch(() => [] as Awaited<ReturnType<typeof getAgents>>)
+  const [agents, bangboos] = await Promise.all([
+    getAgents().catch(() => [] as Awaited<ReturnType<typeof getAgents>>),
+    getBangboos().catch(() => [] as Awaited<ReturnType<typeof getBangboos>>),
+  ])
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -29,7 +32,7 @@ export default async function CompBuilderPage() {
           </p>
         </div>
       ) : (
-        <CompBuilder agents={agents} />
+        <CompBuilder agents={agents} bangboos={bangboos} />
       )}
     </div>
   )

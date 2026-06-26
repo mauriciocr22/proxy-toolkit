@@ -1,8 +1,9 @@
 "use client"
 
-import { useTransition, useState } from "react"
-import type { Agent } from "@/types/zzz"
+import { useTransition, useState, useMemo } from "react"
+import type { Agent, Bangboo, CompAnalysis } from "@/types/zzz"
 import { useComp } from "@/hooks/useComp"
+import { addSavedComp } from "@/lib/storage"
 import { analyzeComp } from "@/app/comp-builder/actions"
 import { CompSlot } from "@/components/comp-builder/CompSlot"
 import { CompResult } from "@/components/comp-builder/CompResult"
@@ -10,21 +11,27 @@ import { AgentSelector } from "@/components/roster/AgentSelector"
 
 interface CompBuilderProps {
   agents: Agent[]
+  bangboos: Bangboo[]
 }
 
-export function CompBuilder({ agents }: CompBuilderProps) {
+export function CompBuilder({ agents, bangboos }: CompBuilderProps) {
   const { selectedAgents, isSelected, toggleAgent, removeSlot, clear, isFull } = useComp(agents)
   const [isPending, startTransition] = useTransition()
-  const [result, setResult] = useState<string | null>(null)
+  const [result, setResult] = useState<CompAnalysis | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const recommendedBangboo = useMemo(
+    () => (result ? (bangboos.find((b) => b.id === result.bangbooId) ?? null) : null),
+    [result, bangboos],
+  )
 
   function handleAnalyze() {
     setResult(null)
     setError(null)
     startTransition(async () => {
       try {
-        const text = await analyzeComp(selectedAgents)
-        setResult(text)
+        const analysis = await analyzeComp(selectedAgents)
+        setResult(analysis)
       } catch {
         setError("Falha ao analisar a composição. Verifique sua chave de API e tente novamente.")
       }
@@ -37,13 +44,27 @@ export function CompBuilder({ agents }: CompBuilderProps) {
     setError(null)
   }
 
+  function handleSave(name: string) {
+    addSavedComp({
+      id: crypto.randomUUID(),
+      name,
+      agentIds: selectedAgents.map((a) => a.id),
+      bangbooId: result?.bangbooId ?? "",
+      aiSuggestion: result?.analysis ?? "",
+      createdAt: new Date().toISOString(),
+    })
+  }
+
   const slots = [0, 1, 2].map((i) => selectedAgents[i])
 
   return (
     <div className="space-y-8">
       {/* Comp slots */}
       <div>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+        <h2
+          className="mb-3 text-xs font-semibold uppercase tracking-widest"
+          style={{ color: "var(--text-muted)" }}
+        >
           Composição
         </h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -73,12 +94,21 @@ export function CompBuilder({ agents }: CompBuilderProps) {
         </div>
       </div>
 
-      {/* AI result */}
-      <CompResult result={result} isPending={isPending} error={error} />
+      {/* AI result + Bangboo + Save */}
+      <CompResult
+        result={result}
+        bangboo={recommendedBangboo}
+        isPending={isPending}
+        error={error}
+        onSave={handleSave}
+      />
 
       {/* Agent selector */}
       <div>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+        <h2
+          className="mb-3 text-xs font-semibold uppercase tracking-widest"
+          style={{ color: "var(--text-muted)" }}
+        >
           Selecionar Agentes
         </h2>
         <AgentSelector
