@@ -1,101 +1,95 @@
 import type { Agent, WEngine, DiscSet, Bangboo } from "@/types/zzz"
 
-const BASE_URL = "https://api.hakush.in/zzz"
+const STATIC_BASE = "https://static.nanoka.cc"
+const ASSET_BASE = `${STATIC_BASE}/assets/zzz`
 
-// Module-level cache: deduplicates calls within the same server process lifecycle.
-// The Next.js `next: { revalidate: 3600 }` option handles ISR revalidation across deploys.
 const memoryCache = new Map<string, unknown>()
 
-async function apiFetch<T>(path: string): Promise<T> {
-  if (memoryCache.has(path)) {
-    return memoryCache.get(path) as T
-  }
-  const res = await fetch(`${BASE_URL}${path}`, {
-    next: { revalidate: 3600 },
-  })
-  if (!res.ok) {
-    throw new Error(`hakush.in request failed: ${res.status} — ${path}`)
-  }
+async function apiFetch<T>(url: string): Promise<T> {
+  if (memoryCache.has(url)) return memoryCache.get(url) as T
+  const res = await fetch(url, { next: { revalidate: 3600 } })
+  if (!res.ok) throw new Error(`nanoka.cc request failed: ${res.status} — ${url}`)
   const data = (await res.json()) as T
-  memoryCache.set(path, data)
+  memoryCache.set(url, data)
   return data
 }
 
+async function dataUrl(resource: string): Promise<string> {
+  const manifest = await apiFetch<{ zzz: { latest: string } }>(`${STATIC_BASE}/manifest.json`)
+  return `${STATIC_BASE}/zzz/${manifest.zzz.latest}/${resource}.json`
+}
+
 // ---------------------------------------------------------------------------
-// Raw API response types (internal — not exported)
-// Field names reflect the actual hakush.in ZZZ response shapes.
+// Raw API response types (internal)
 // ---------------------------------------------------------------------------
 
-interface RawCharacterItem {
+interface RawCharacter {
+  en: string
+  rank: number  // 4=S, 3=A
+  type: number  // specialty code
+  element: number
+  camp: number
+  icon: string
   code: string
-  icon: string
-  name: string
-  rarity: number
-  // "type" encodes the Profession/Specialty. Element may appear as a top-level
-  // field ("ElementType") or be embedded in the detail response.
+}
+
+type RawCharacterList = Record<string, RawCharacter>
+
+interface RawWeapon {
+  en: string
+  rank: number  // 4=S, 3=A, 2=B
   type: number
-  ElementType?: number
-}
-
-type RawCharacterList = Record<string, RawCharacterItem>
-
-interface RawCharacterDetail extends RawCharacterItem {
-  faction?: string
-  Camp?: string // alternative field name used in some versions
-}
-
-interface RawWeaponItem {
-  name: string
-  rarity: number
-  icon: string
-  AvatarBaseType?: string // specialty the weapon is designed for
   desc?: string
-}
-
-type RawWeaponList = Record<string, RawWeaponItem>
-
-interface RawEquipmentItem {
-  name: string
-  desc2?: string  // 2-piece bonus
-  desc4?: string  // 4-piece bonus
-}
-
-type RawEquipmentList = Record<string, RawEquipmentItem>
-
-interface RawBangbooItem {
-  name: string
-  rarity: number
   icon: string
-  desc?: string
 }
 
-type RawBangbooList = Record<string, RawBangbooItem>
+type RawWeaponList = Record<string, RawWeapon>
+
+interface RawEquipmentLocale {
+  name: string
+  desc2?: string
+  desc4?: string
+}
+
+interface RawEquipment {
+  en: RawEquipmentLocale
+  icon: string
+}
+
+type RawEquipmentList = Record<string, RawEquipment>
+
+interface RawBangboo {
+  en: string
+  rank: number
+  desc?: string
+  icon: string
+}
+
+type RawBangbooList = Record<string, RawBangboo>
 
 // ---------------------------------------------------------------------------
 // Mapping helpers
 // ---------------------------------------------------------------------------
 
-function mapRarity(rarity: number): "S" | "A" {
-  return rarity >= 5 ? "S" : "A"
+function mapRarity(rank: number): "S" | "A" {
+  return rank >= 4 ? "S" : "A"
 }
 
-// hakush.in ZZZ element codes (ElementType field)
+function mapWeaponRarity(rank: number): "S" | "A" | "B" {
+  if (rank >= 4) return "S"
+  if (rank >= 3) return "A"
+  return "B"
+}
+
 const ELEMENT_MAP: Record<number, Agent["element"]> = {
   200: "Physical",
   201: "Fire",
   202: "Ice",
   203: "Electric",
-  // 204 is tentative for Wind (added in ZZZ 3.0) — verify against live API
   204: "Wind",
   205: "Ether",
 }
 
-function mapElement(code: number | undefined): Agent["element"] {
-  if (code === undefined) return "Physical"
-  return ELEMENT_MAP[code] ?? "Physical"
-}
-
-// hakush.in ZZZ profession/specialty codes (type field)
 const SPECIALTY_MAP: Record<number, Agent["specialty"]> = {
   1: "Attack",
   2: "Stun",
@@ -104,12 +98,19 @@ const SPECIALTY_MAP: Record<number, Agent["specialty"]> = {
   5: "Defense",
 }
 
+function mapElement(code: number): Agent["element"] {
+  return ELEMENT_MAP[code] ?? "Physical"
+}
+
 function mapSpecialty(code: number): Agent["specialty"] {
   return SPECIALTY_MAP[code] ?? "Attack"
 }
 
+// Icon field is either a bare name ("IconRole01") or a full path ending in .png.
+// Both resolve to `${ASSET_BASE}/{basename}.webp`.
 function iconUrl(icon: string): string {
-  return `${BASE_URL}/UI/${icon}.webp`
+  const basename = icon.split("/").pop()?.replace(/\.[^.]+$/, "") ?? icon
+  return `${ASSET_BASE}/${basename}.webp`
 }
 
 // ---------------------------------------------------------------------------
@@ -117,28 +118,30 @@ function iconUrl(icon: string): string {
 // ---------------------------------------------------------------------------
 
 export async function getAgents(): Promise<Agent[]> {
-  const data = await apiFetch<RawCharacterList>("/character")
+  const data = await apiFetch<RawCharacterList>(await dataUrl("character"))
   return Object.entries(data).map(([id, char]) => ({
     id,
-    name: char.name,
-    element: mapElement(char.ElementType),
+    name: char.en,
+    element: mapElement(char.element),
     specialty: mapSpecialty(char.type),
     faction: "",
-    rarity: mapRarity(char.rarity),
+    rarity: mapRarity(char.rank),
     iconUrl: iconUrl(char.icon),
   }))
 }
 
 export async function getAgent(id: string): Promise<Agent | null> {
   try {
-    const char = await apiFetch<RawCharacterDetail>(`/character/${id}`)
+    const data = await apiFetch<RawCharacterList>(await dataUrl("character"))
+    const char = data[id]
+    if (!char) return null
     return {
       id,
-      name: char.name,
-      element: mapElement(char.ElementType),
+      name: char.en,
+      element: mapElement(char.element),
       specialty: mapSpecialty(char.type),
-      faction: char.faction ?? char.Camp ?? "",
-      rarity: mapRarity(char.rarity),
+      faction: "",
+      rarity: mapRarity(char.rank),
       iconUrl: iconUrl(char.icon),
     }
   } catch {
@@ -147,32 +150,32 @@ export async function getAgent(id: string): Promise<Agent | null> {
 }
 
 export async function getWEngines(): Promise<WEngine[]> {
-  const data = await apiFetch<RawWeaponList>("/weapon")
+  const data = await apiFetch<RawWeaponList>(await dataUrl("weapon"))
   return Object.entries(data).map(([id, weapon]) => ({
     id,
-    name: weapon.name,
-    specialty: weapon.AvatarBaseType ?? "",
-    rarity: mapRarity(weapon.rarity),
+    name: weapon.en,
+    specialty: SPECIALTY_MAP[weapon.type] ?? "",
+    rarity: mapWeaponRarity(weapon.rank),
     description: weapon.desc ?? "",
   }))
 }
 
 export async function getDiscSets(): Promise<DiscSet[]> {
-  const data = await apiFetch<RawEquipmentList>("/equipment")
+  const data = await apiFetch<RawEquipmentList>(await dataUrl("equipment"))
   return Object.entries(data).map(([id, set]) => ({
     id,
-    name: set.name,
-    twoPieceBonus: set.desc2 ?? "",
-    fourPieceBonus: set.desc4 ?? "",
+    name: set.en.name,
+    twoPieceBonus: set.en.desc2 ?? "",
+    fourPieceBonus: set.en.desc4 ?? "",
   }))
 }
 
 export async function getBangboos(): Promise<Bangboo[]> {
-  const data = await apiFetch<RawBangbooList>("/bangboo")
+  const data = await apiFetch<RawBangbooList>(await dataUrl("bangboo"))
   return Object.entries(data).map(([id, boo]) => ({
     id,
-    name: boo.name,
-    rarity: mapRarity(boo.rarity),
+    name: boo.en,
+    rarity: mapRarity(boo.rank),
     description: boo.desc ?? "",
     iconUrl: iconUrl(boo.icon),
   }))
