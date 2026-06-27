@@ -308,7 +308,7 @@ Redesign of the visual layer to match the "HDD/chassis" direction in [docs/desig
 - [x] 1. Global CSS variables and typography (tokens, fonts, base texture)
 - [x] 2. AgentCard — parallelogram shape, attribute hover glow, rarity badge
 - [x] 3. Roster page — hex texture header, pill filter bar, responsive grid
-- [ ] 4. Nav — styled logo, chassis micro-details
+- [x] 4. Nav — styled logo, chassis micro-details
 - [ ] 5. Comp Builder — diagonal team slots, terminal-style AI analysis panel
 
 ---
