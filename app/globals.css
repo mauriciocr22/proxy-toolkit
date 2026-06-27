@@ -1,29 +1,66 @@
 @import "tailwindcss";
 
 :root {
-  --bg-base: #0a0a0f;
-  --bg-card: #13131a;
-  --bg-elevated: #1c1c27;
+  /* ── Chassis (design system tokens) ──────────────────────── */
+  --bg:        #0C0D11;
+  --surface:   #15171E;
+  --surface-2: #1E212B;
+  --line:      #2A2E3A;
+  --muted:     #8A8F9E;
+  --fg:        #EDEFF5;
 
-  --accent-yellow: #f5c400;
-  --accent-yellow-dim: #a88500;
+  /* ── Brand ───────────────────────────────────────────────── */
+  --brand:       #F2FF49;
+  --accent-warn: #FF5A1F;
 
-  --accent-cyan: #00e5ff;
-  --accent-cyan-dim: #0099aa;
+  /* ── Attributes (semantic — agent classification only) ────── */
+  --el-physical: #F7D94C;
+  --el-fire:     #FF4D3D;
+  --el-ice:      #5FD0FF;
+  --el-electric: #4D7BFF;
+  --el-ether:    #FF4DB8;
+  --el-wind:     #4DFFB8;
 
-  --text-primary: #ffffff;
-  --text-secondary: #9999aa;
-  --text-muted: #555566;
-
-  --border: #2a2a3a;
-  --border-accent: #f5c400;
-
-  --rarity-s: #f5a623;
-  --rarity-a: #9b59b6;
+  /* ── Legacy aliases — removed as components are redesigned ── */
+  --bg-base:        var(--bg);
+  --bg-card:        var(--surface);
+  --bg-elevated:    var(--surface-2);
+  --text-primary:   var(--fg);
+  --text-secondary: var(--muted);
+  --text-muted:     var(--muted);
+  --border:         var(--line);
+  --accent-yellow:  var(--brand);
+  --rarity-s:       var(--accent-warn);
+  --rarity-a:       #9b59b6;
+  --accent-cyan:    var(--el-ice);
+  --accent-cyan-dim: #3a8fa8;
 }
 
 body {
-  background-color: var(--bg-base);
-  color: var(--text-primary);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body, system-ui, -apple-system, sans-serif);
+  /* Diagonal chassis texture */
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 6px,
+    rgba(255, 255, 255, 0.015) 6px 7px
+  );
+}
+
+/* Display headings use the tech font */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display, var(--font-body, system-ui, sans-serif));
+}
+
+@keyframes crt-flicker {
+  0%, 93%, 100% { opacity: 1; }
+  94%           { opacity: 0.55; }
+  96%           { opacity: 0.88; }
+  98%           { opacity: 0.68; }
+}
+
+@keyframes card-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

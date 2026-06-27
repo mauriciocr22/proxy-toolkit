@@ -1,7 +1,26 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { Chakra_Petch, Inter, Geist_Mono } from "next/font/google"
 import { NavLinks } from "@/components/ui/NavLinks"
 import "./globals.css"
+
+const chakraPetch = Chakra_Petch({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-display",
+})
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: "variable",
+  variable: "--font-body",
+})
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  weight: "variable",
+  variable: "--font-mono",
+})
 
 export const metadata: Metadata = {
   title: "Proxy Toolkit",
@@ -14,7 +33,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="h-full">
+    <html
+      lang="en"
+      className={`h-full ${chakraPetch.variable} ${inter.variable} ${geistMono.variable}`}
+    >
       <body className="min-h-full flex flex-col">
         <header
           className="sticky top-0 z-50 border-b"

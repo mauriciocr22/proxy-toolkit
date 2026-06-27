@@ -25,20 +25,24 @@ proxy-toolkit/
 ├── app/
 │   ├── layout.tsx               # Global layout with nav
 │   ├── page.tsx                 # Home → redirects to Roster
+│   ├── loading.tsx              # Global loading spinner
+│   ├── not-found.tsx            # 404 page
 │   ├── roster/
 │   │   └── page.tsx             # Manage agents the user owns
 │   ├── comp-builder/
-│   │   └── page.tsx             # Build comp + AI suggestion + Bangboo
+│   │   ├── page.tsx             # Build comp + AI suggestion + Bangboo
+│   │   └── actions.ts           # Server actions for comp AI call
 │   └── agent/
 │       └── [id]/
-│           └── page.tsx         # Per-agent build recommender
+│           ├── page.tsx         # Per-agent build recommender
+│           └── actions.ts       # Server actions for build AI call
 ├── components/
-│   ├── ui/                      # Reusable components (Button, Card, Badge, Modal)
+│   ├── ui/                      # Reusable components (NavLinks, …)
 │   ├── roster/                  # AgentCard, AgentGrid, AgentSelector
-│   ├── comp-builder/            # CompSlot, CompResult, BangbooCard
-│   └── agent/                   # BuildCard, DiscSetCard, WEngineCard
+│   ├── comp-builder/            # CompBuilder, CompSlot, CompResult, BangbooCard
+│   └── agent/                   # AgentBuildClient, BuildCard, DiscSetCard, WEngineCard
 ├── lib/
-│   ├── hakushin.ts              # hakush.in API client (fetch + cache)
+│   ├── hakushin.ts              # nanoka.cc API client (fetch + cache)
 │   ├── storage.ts               # Typed localStorage helpers
 │   └── ai.ts                    # Gemini API calls (comp + build)
 ├── hooks/
@@ -92,44 +96,65 @@ Rules:
 
 ## Design System
 
-### Color Palette
+Full direction: [docs/design.md](docs/design.md). Visual references: [docs/agent-card.png](docs/agent-card.png), [docs/agent-page.png](docs/agent-page.png), [docs/agents-grid.png](docs/agents-grid.png), [docs/filter-bar.png](docs/filter-bar.png).
+
+### Concept
+
+The UI is an **old-futuristic physical device** (HDD, cassette, CRT). Every element should feel like a chassis component — not a flat webpage. Three non-negotiable rules:
+1. **Diagonal over straight** — parallelograms and chamfers everywhere.
+2. **Color = information** — neon only on attributes or rarity, never decorative.
+3. **Texture always** — no 100% flat surface; add grain, scanlines, or hex pattern.
+
+### Color Tokens
 
 ```css
-/* Background */
---bg-base: #0a0a0f;
---bg-card: #13131a;
---bg-elevated: #1c1c27;
+/* Chassis */
+--bg:        #0C0D11;  /* page background */
+--surface:   #15171E;  /* card chassis */
+--surface-2: #1E212B;  /* elevated panels / hover */
+--line:      #2A2E3A;  /* borders, dividers */
+--muted:     #8A8F9E;  /* secondary text */
+--fg:        #EDEFF5;  /* primary text */
 
-/* ZZZ Accent */
---accent-yellow: #f5c400;
---accent-yellow-dim: #a88500;
+/* Brand */
+--brand:       #F2FF49;  /* ZZZ acid yellow — CTAs, highlights — use sparingly */
+--accent-warn: #FF5A1F;  /* S-rank orange, alerts */
 
-/* Secondary neon */
---accent-cyan: #00e5ff;
---accent-cyan-dim: #0099aa;
-
-/* Text */
---text-primary: #ffffff;
---text-secondary: #9999aa;
---text-muted: #555566;
-
-/* Borders */
---border: #2a2a3a;
---border-accent: #f5c400;
-
-/* Rarity */
---rarity-s: #f5a623;
---rarity-a: #9b59b6;
+/* Attributes (semantic only — agent classification) */
+--el-physical: #F7D94C;
+--el-fire:     #FF4D3D;
+--el-ice:      #5FD0FF;
+--el-electric: #4D7BFF;
+--el-ether:    #FF4DB8;
+--el-wind:     #4DFFB8;
 ```
 
-### Visual Guidelines
+### Typography
 
-- Main background: near-black with a slight purple/blue tint (`#0a0a0f`)
-- Cards with subtle border (`border border-[--border]`) and `rounded-xl`
-- S-rank agents with golden border (`border-[--accent-yellow]`)
-- Primary buttons: ZZZ yellow background with black text
-- Use `backdrop-blur` and slight transparency on overlays
-- Typography: Tailwind default system font stack, no external fonts for now
+- **Headings / labels:** `Chakra Petch` or `Saira` — UPPERCASE, wide `letter-spacing`.
+- **Body:** `Inter` or `Geist`.
+- **Stats / numbers:** `Geist Mono` or `JetBrains Mono` — "instrument reading" feel.
+
+### Shape Language
+
+- **Parallelogram cards:** `transform: skewX(-7deg)` on the card wrapper; `skewX(7deg)` on the inner content to un-skew.
+- **Chamfers:** `clip-path` to cut one corner at 45°; mix with soft radius on remaining corners.
+- **Diagonal texture:** `repeating-linear-gradient(135deg, transparent 0 6px, rgba(255,255,255,.02) 6px 7px)`.
+- **Hex texture:** SVG tile at low opacity on headers and large background areas.
+- **Chassis details:** corner brackets (`⌐ ¬`), micro-labels (`// AGENT.DB`), registration marks.
+
+### Motion Rules
+
+- **Hover:** diagonal clip-path reveal in the attribute color — not a standard opacity fade.
+- **Neon glow:** `box-shadow` in the attribute color on hover; subtle scanline overlay on cards.
+- **Page load:** staggered entry (animation-delay per card) + brief CRT-flicker on section titles.
+
+### Pitfalls
+
+- No plain rounded rectangles — always apply skew or chamfer.
+- No purple/violet as dominant tone (reserve magenta for Ether only).
+- No rainbow neon — color carries meaning, not mood.
+- No smooth flat surfaces — grain or scanlines required.
 
 ---
 
@@ -141,7 +166,7 @@ Rules:
 export interface Agent {
   id: string
   name: string
-  element: 'Fire' | 'Ice' | 'Electric' | 'Physical' | 'Ether'
+  element: 'Fire' | 'Ice' | 'Electric' | 'Physical' | 'Ether' | 'Wind'
   specialty: 'Attack' | 'Stun' | 'Anomaly' | 'Support' | 'Defense'
   faction: string
   rarity: 'S' | 'A'
@@ -186,6 +211,19 @@ export interface SavedComp {
   aiSuggestion: string    // text generated by AI
   createdAt: string       // ISO string
 }
+
+export interface CompAnalysis {
+  analysis: string
+  bangbooId: string
+}
+
+export interface BuildAnalysis {
+  recommendation: string
+  wEngineId: string
+  altWEngineId: string
+  discSetId: string
+  altDiscSetId: string
+}
 ```
 
 ---
@@ -203,53 +241,75 @@ Always read and write via typed helpers in `lib/storage.ts`. Never access `local
 
 ---
 
-## hakush.in API
+## nanoka.cc API
 
-Base URL: `https://api.hakush.in/zzz`
+Base URL: `https://static.nanoka.cc`
 
-Expected endpoints:
-- `GET /character` — list all agents
-- `GET /character/{id}` — single agent details
-- `GET /weapon` — list all w-engines
-- `GET /equipment` — list all disc sets
-- `GET /bangboo` — list all bangboos
+The API uses a versioned manifest pattern:
+1. `GET /manifest.json` — returns `{ zzz: { latest: "<version>" } }`
+2. `GET /zzz/<version>/<resource>.json` — returns the full data file
 
-All game data fetches must go through `lib/hakushin.ts`. Use `next: { revalidate: 3600 }` on fetches (revalidates every hour). Cache at module level to avoid duplicate calls in the same session.
+Resources: `character`, `weapon`, `equipment`, `bangboo`
+
+Asset icons: `https://static.nanoka.cc/assets/zzz/<basename>.webp`
+
+All game data fetches must go through `lib/hakushin.ts`. Use `next: { revalidate: 3600 }` on fetches (revalidates every hour). An in-memory `Map` cache prevents duplicate fetches within the same server lifecycle.
 
 ---
 
-## Claude API — Prompts
+## Gemini API — Prompts
+
+All calls use `gemini-2.5-flash` via `@google/genai`. Responses are always structured JSON; `extractJson()` in `lib/ai.ts` strips any surrounding text the model may emit.
 
 ### Comp suggestion + Bangboo
 
-```typescript
-// lib/ai.ts
-// Input: 3 selected agents with full data
-// Output: synergy analysis, each agent's role, recommended Bangboo and alternative, rotation tips
+Two-step flow in `getCompSuggestion`:
+1. **Grounded search** (Google Search tool enabled) — asks which Bangboo fits the comp and gets a plain-text research result.
+2. **Structured analysis** — sends agents + bangboo list + research result, returns JSON.
 
-const COMP_SYSTEM_PROMPT = `
-You are a Zenless Zone Zero expert.
-Analyze the provided agent composition and respond in Brazilian Portuguese.
-Explain the comp's synergy, each agent's role, the ideal Bangboo, and a basic rotation.
-Be direct and practical. Maximum 300 words.
-`
+```typescript
+// lib/ai.ts — input payload shape
+{
+  agents: Array<{ name, element, specialty, faction, rarity }>,
+  bangboos: Array<{ id, name, rarity, description }>,
+  bangbooResearch: string   // plain-text result from step 1
+}
+
+// output shape
+{ analysis: string, bangbooId: string }
 ```
+
+The system prompt instructs the model to: name skills by their in-game names, explain exact kit interactions, state each agent's role concisely, pick `bangbooId` from the provided list using the research result, and give a 2–3 step rotation. Max 300 words, in Brazilian Portuguese.
 
 ### Per-agent build recommender
 
-```typescript
-// Input: full agent data
-// Output: main W-Engine and alternative, recommended disc sets, priority stats
+Single call in `getBuildSuggestion`:
 
-const BUILD_SYSTEM_PROMPT = `
-You are a Zenless Zone Zero build expert.
-For the provided agent, recommend in Brazilian Portuguese:
-- Main W-Engine and a free/accessible alternative
-- Main disc set and an alternative
-- Priority stats per slot
-Be concise. Maximum 250 words.
-`
+```typescript
+// input payload shape
+{
+  agent: { name, element, specialty, faction, rarity },
+  wEngines: Array<{ id, name, specialty, rarity }>,
+  discSets: Array<{ id, name, twoPieceBonus, fourPieceBonus }>
+}
+
+// output shape (BuildAnalysis)
+{ recommendation: string, wEngineId: string, altWEngineId: string, discSetId: string, altDiscSetId: string }
 ```
+
+The system prompt instructs the model to recommend the main W-Engine, an accessible alternative, main disc set, alternative disc set, and priority stats per slot. All IDs must come from the provided lists. Max 250 words, in Brazilian Portuguese.
+
+---
+
+## Implementation Progress
+
+Redesign of the visual layer to match the "HDD/chassis" direction in [docs/design.md](docs/design.md).
+
+- [x] 1. Global CSS variables and typography (tokens, fonts, base texture)
+- [x] 2. AgentCard — parallelogram shape, attribute hover glow, rarity badge
+- [x] 3. Roster page — hex texture header, pill filter bar, responsive grid
+- [ ] 4. Nav — styled logo, chassis micro-details
+- [ ] 5. Comp Builder — diagonal team slots, terminal-style AI analysis panel
 
 ---
 
@@ -261,16 +321,3 @@ Be concise. Maximum 250 words.
 - Agent tier list
 - Pull/gacha tracker
 
----
-
-## Implementation Order
-
-1. Project setup: Next.js + Tailwind + TypeScript
-2. `lib/hakushin.ts` — fetch and cache game data from API
-3. `types/zzz.ts` — all domain types
-4. `lib/storage.ts` — localStorage helpers
-5. Roster page — display agents, mark as owned
-6. Comp Builder page — select 3 agents + call AI
-7. Bangboo recommendation — integrated into comp result
-8. Agent page — per-agent build recommender
-9. Visual polish and responsiveness

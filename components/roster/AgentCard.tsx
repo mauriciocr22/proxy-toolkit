@@ -1,15 +1,30 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import type { Agent } from "@/types/zzz"
 
-const ELEMENT_COLORS: Record<Agent["element"], string> = {
-  Fire: "#ef4444",
-  Ice: "#38bdf8",
-  Electric: "#a855f7",
-  Physical: "#94a3b8",
-  Ether: "#34d399",
-  Wind: "#4ade80",
+const ELEMENT_HEX: Record<Agent["element"], string> = {
+  Fire:     "#FF4D3D",
+  Ice:      "#5FD0FF",
+  Electric: "#4D7BFF",
+  Physical: "#F7D94C",
+  Ether:    "#FF4DB8",
+  Wind:     "#4DFFB8",
+}
+
+const ELEMENT_ABBR: Record<Agent["element"], string> = {
+  Fire:     "FIRE",
+  Ice:      "ICE",
+  Electric: "ELEC",
+  Physical: "PHYS",
+  Ether:    "ETHE",
+  Wind:     "WIND",
+}
+
+const RARITY_COLOR: Record<Agent["rarity"], string> = {
+  S: "#FF5A1F",
+  A: "#9b59b6",
 }
 
 interface AgentCardProps {
@@ -19,68 +34,172 @@ interface AgentCardProps {
 }
 
 export function AgentCard({ agent, owned, onToggle }: AgentCardProps) {
-  const elementColor = ELEMENT_COLORS[agent.element]
-  const rarityBorder = agent.rarity === "S" ? "var(--rarity-s)" : "var(--rarity-a)"
+  const [hovered, setHovered] = useState(false)
+  const elColor = ELEMENT_HEX[agent.element]
+  const rarityColor = RARITY_COLOR[agent.rarity]
+  const isActive = hovered && owned
 
   return (
-    <div
-      className="relative flex flex-col items-center rounded-xl border-2 p-3 text-center transition-all"
+    <article
+      className="relative"
       style={{
-        backgroundColor: owned ? "var(--bg-elevated)" : "var(--bg-card)",
-        borderColor: owned ? rarityBorder : "var(--border)",
-        opacity: owned ? 1 : 0.55,
+        transform: "skewX(-6deg)",
+        opacity: owned ? 1 : 0.4,
+        filter: owned ? "none" : "saturate(0.15)",
+        transition: "opacity 0.25s ease, filter 0.25s ease",
       }}
     >
-      {/* Owned toggle */}
-      <button
-        onClick={() => onToggle(agent.id)}
-        className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold transition-colors"
-        style={{
-          backgroundColor: owned ? "var(--accent-yellow)" : "var(--bg-base)",
-          color: owned ? "#000" : "var(--text-muted)",
-          border: owned ? "none" : "1px solid var(--border)",
-        }}
-        aria-label={owned ? `Remover ${agent.name} do roster` : `Adicionar ${agent.name} ao roster`}
-      >
-        {owned ? "✓" : "+"}
-      </button>
+      {/* Counter-skew so all content appears straight */}
+      <div style={{ transform: "skewX(6deg)" }}>
 
-      {/* Link to agent detail page */}
-      <Link
-        href={`/agent/${agent.id}`}
-        className="flex flex-col items-center gap-1.5 focus:outline-none focus-visible:ring-2 rounded-lg"
-        style={{ "--tw-ring-color": "var(--accent-yellow)" } as React.CSSProperties}
-        tabIndex={0}
-      >
+        {/* Positioning root for the absolute toggle */}
         <div
-          className="h-16 w-16 overflow-hidden rounded-lg"
-          style={{ backgroundColor: "var(--bg-base)" }}
+          className="relative"
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={agent.iconUrl}
-            alt={agent.name}
-            className="h-full w-full object-cover"
-            onError={(e) => {
-              ;(e.currentTarget as HTMLImageElement).style.display = "none"
+
+          {/* ── Card link ─────────────────────────────────────── */}
+          <Link
+            href={`/agent/${agent.id}`}
+            className="block focus:outline-none"
+            style={{
+              overflow: "hidden",
+              /* Chamfer: top-right corner cut at 45° */
+              clipPath: "polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%)",
+              boxShadow: isActive
+                ? `0 0 0 2px ${elColor}, 0 0 28px ${elColor}55, 0 8px 32px rgba(0,0,0,0.8)`
+                : `0 0 0 1px var(--line), 0 4px 16px rgba(0,0,0,0.5)`,
+              transition: "box-shadow 0.3s ease",
             }}
-          />
+          >
+
+            {/* Portrait area ─────────────────────────────────── */}
+            <div
+              className="relative"
+              style={{ aspectRatio: "3/4", backgroundColor: "var(--surface)" }}
+            >
+              {/* Character image */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={agent.iconUrl}
+                alt={agent.name}
+                className="h-full w-full object-cover object-top"
+                style={{
+                  transform: isActive ? "scale(1.06)" : "scale(1)",
+                  transition: "transform 0.45s ease",
+                }}
+                onError={(e) => {
+                  ;(e.currentTarget as HTMLImageElement).style.display = "none"
+                }}
+              />
+
+              {/* Scanline texture */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    "repeating-linear-gradient(0deg, transparent 0, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 3px)",
+                  zIndex: 1,
+                }}
+              />
+
+              {/* Diagonal element-color reveal on hover */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: `linear-gradient(135deg, transparent 20%, ${elColor}28 100%)`,
+                  clipPath: isActive
+                    ? "polygon(0 0, 100% 0, 100% 100%, 0 100%)"
+                    : "polygon(100% 0, 100% 0, 100% 100%, 100% 100%)",
+                  transition: "clip-path 0.38s ease",
+                  zIndex: 2,
+                }}
+              />
+
+              {/* Bottom vignette for name-strip readability */}
+              <div
+                className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
+                style={{
+                  background: "linear-gradient(to top, rgba(12,13,17,0.9) 0%, transparent 100%)",
+                  zIndex: 3,
+                }}
+              />
+
+              {/* Element badge ── top left */}
+              <div
+                className="absolute left-2 top-2 px-1.5 py-0.5 text-[8px] font-black tracking-[0.18em]"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  color: elColor,
+                  backgroundColor: "rgba(12,13,17,0.75)",
+                  border: `1px solid ${elColor}55`,
+                  clipPath: "polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%)",
+                  zIndex: 4,
+                }}
+              >
+                {ELEMENT_ABBR[agent.element]}
+              </div>
+            </div>
+
+            {/* Name strip ────────────────────────────────────── */}
+            <div
+              className="flex items-center gap-2 px-2.5 py-2"
+              style={{ backgroundColor: "var(--surface-2)" }}
+            >
+              {/* Rarity badge */}
+              <span
+                className="flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center text-[9px] font-black"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  backgroundColor: rarityColor,
+                  color: "#fff",
+                  clipPath:
+                    "polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%)",
+                  boxShadow: `0 0 8px ${rarityColor}70`,
+                }}
+              >
+                {agent.rarity}
+              </span>
+
+              {/* Agent name */}
+              <span
+                className="flex-1 truncate text-[11px] font-bold uppercase tracking-widest"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  color: isActive ? "var(--fg)" : "var(--muted)",
+                  transition: "color 0.2s ease",
+                }}
+              >
+                {agent.name}
+              </span>
+            </div>
+          </Link>
+
+          {/* ── Owned toggle ──────────────────────────────────── */}
+          <button
+            onClick={() => onToggle(agent.id)}
+            className="absolute right-2 top-2 z-10 flex h-5 w-5 items-center justify-center text-[9px] font-black"
+            style={{
+              fontFamily: "var(--font-display)",
+              backgroundColor: owned ? "var(--brand)" : "rgba(12,13,17,0.8)",
+              color: owned ? "#000" : "var(--muted)",
+              border: owned ? "none" : "1px solid var(--line)",
+              clipPath:
+                "polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px)",
+              boxShadow: owned ? "0 0 8px var(--brand)" : "none",
+              transition: "background-color 0.2s ease, box-shadow 0.2s ease",
+            }}
+            aria-label={
+              owned
+                ? `Remover ${agent.name} do roster`
+                : `Adicionar ${agent.name} ao roster`
+            }
+          >
+            {owned ? "✓" : "+"}
+          </button>
         </div>
-
-        <span
-          className="w-full truncate text-xs font-semibold"
-          style={{ color: "var(--text-primary)" }}
-        >
-          {agent.name}
-        </span>
-
-        <span
-          className="rounded px-1.5 py-0.5 text-[10px] font-medium text-black"
-          style={{ backgroundColor: elementColor }}
-        >
-          {agent.element}
-        </span>
-      </Link>
-    </div>
+      </div>
+    </article>
   )
 }
