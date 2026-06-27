@@ -13,18 +13,23 @@ const ELEMENT_HEX: Record<Agent["element"], string> = {
   Wind:     "#4DFFB8",
 }
 
-const ELEMENT_ABBR: Record<Agent["element"], string> = {
-  Fire:     "FIRE",
-  Ice:      "ICE",
-  Electric: "ELEC",
-  Physical: "PHYS",
-  Ether:    "ETHE",
-  Wind:     "WIND",
+const ELEMENT_ICON: Record<Agent["element"], string> = {
+  Fire:     "/icons/elements/Icon_Fire.webp",
+  Ice:      "/icons/elements/Icon_Ice.webp",
+  Electric: "/icons/elements/Icon_Electric.webp",
+  Physical: "/icons/elements/Icon_Physical.webp",
+  Ether:    "/icons/elements/Icon_Ether.webp",
+  Wind:     "/icons/elements/Icon_Wind.webp",
 }
 
 const RARITY_COLOR: Record<Agent["rarity"], string> = {
   S: "#FF5A1F",
   A: "#9b59b6",
+}
+
+const RARITY_ICON: Record<Agent["rarity"], string> = {
+  S: "/icons/ranks/Icon_AgentRank_S.webp",
+  A: "/icons/ranks/Icon_AgentRank_A.webp",
 }
 
 interface AgentCardProps {
@@ -128,17 +133,22 @@ export function AgentCard({ agent, owned, onToggle }: AgentCardProps) {
 
               {/* Element badge ── top left */}
               <div
-                className="absolute left-2 top-2 px-1.5 py-0.5 text-[8px] font-black tracking-[0.18em]"
+                className="absolute left-2 top-2 flex items-center justify-center p-1"
                 style={{
-                  fontFamily: "var(--font-display)",
-                  color: elColor,
                   backgroundColor: "rgba(12,13,17,0.75)",
                   border: `1px solid ${elColor}55`,
                   clipPath: "polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%)",
                   zIndex: 4,
                 }}
               >
-                {ELEMENT_ABBR[agent.element]}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={ELEMENT_ICON[agent.element]}
+                  alt={agent.element}
+                  width={18}
+                  height={18}
+                  style={{ display: "block" }}
+                />
               </div>
             </div>
 
@@ -149,17 +159,21 @@ export function AgentCard({ agent, owned, onToggle }: AgentCardProps) {
             >
               {/* Rarity badge */}
               <span
-                className="flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center text-[9px] font-black"
+                className="flex h-5.5 w-5.5 shrink-0 items-center justify-center overflow-hidden"
                 style={{
-                  fontFamily: "var(--font-display)",
                   backgroundColor: rarityColor,
-                  color: "#fff",
-                  clipPath:
-                    "polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%)",
+                  clipPath: "polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%)",
                   boxShadow: `0 0 8px ${rarityColor}70`,
                 }}
               >
-                {agent.rarity}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={RARITY_ICON[agent.rarity]}
+                  alt={agent.rarity}
+                  width={16}
+                  height={16}
+                  style={{ display: "block" }}
+                />
               </span>
 
               {/* Agent name */}

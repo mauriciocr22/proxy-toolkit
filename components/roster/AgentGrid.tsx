@@ -5,34 +5,34 @@ import type { Agent } from "@/types/zzz"
 import { useRoster } from "@/hooks/useRoster"
 import { AgentCard } from "@/components/roster/AgentCard"
 
-type ElementFilter  = Agent["element"]   | "All"
+type ElementFilter = Agent["element"] | "All"
 type SpecialtyFilter = Agent["specialty"] | "All"
-type RarityFilter   = Agent["rarity"]    | "All"
+type RarityFilter = Agent["rarity"] | "All"
 
 const ELEMENT_COLORS: Record<Agent["element"], string> = {
-  Fire:     "#FF4D3D",
-  Ice:      "#5FD0FF",
+  Fire: "#FF4D3D",
+  Ice: "#5FD0FF",
   Electric: "#4D7BFF",
   Physical: "#F7D94C",
-  Ether:    "#FF4DB8",
-  Wind:     "#4DFFB8",
+  Ether: "#FF4DB8",
+  Wind: "#4DFFB8",
 }
 
-const ELEMENTS: Array<{ value: Agent["element"]; label: string }> = [
-  { value: "Fire",     label: "FIRE" },
-  { value: "Ice",      label: "ICE"  },
-  { value: "Electric", label: "ELEC" },
-  { value: "Physical", label: "PHYS" },
-  { value: "Ether",    label: "ETHE" },
-  { value: "Wind",     label: "WIND" },
+const ELEMENTS: Array<{ value: Agent["element"]; label: string; icon: string }> = [
+  { value: "Fire", label: "Fire", icon: "/icons/elements/Icon_Fire.webp" },
+  { value: "Ice", label: "Ice", icon: "/icons/elements/Icon_Ice.webp" },
+  { value: "Electric", label: "Electric", icon: "/icons/elements/Icon_Electric.webp" },
+  { value: "Physical", label: "Physical", icon: "/icons/elements/Icon_Physical.webp" },
+  { value: "Ether", label: "Ether", icon: "/icons/elements/Icon_Ether.webp" },
+  { value: "Wind", label: "Wind", icon: "/icons/elements/Icon_Wind.webp" },
 ]
 
-const SPECIALTIES: Array<{ value: Agent["specialty"]; label: string }> = [
-  { value: "Attack",  label: "ATK" },
-  { value: "Stun",    label: "STN" },
-  { value: "Anomaly", label: "ANM" },
-  { value: "Support", label: "SPT" },
-  { value: "Defense", label: "DEF" },
+const SPECIALTIES: Array<{ value: Agent["specialty"]; label: string; icon: string }> = [
+  { value: "Attack", label: "Attack", icon: "/icons/roles/Icon_Attack.webp" },
+  { value: "Stun", label: "Stun", icon: "/icons/roles/Icon_Stun.webp" },
+  { value: "Anomaly", label: "Anomaly", icon: "/icons/roles/Icon_Anomaly.webp" },
+  { value: "Support", label: "Support", icon: "/icons/roles/Icon_Support.webp" },
+  { value: "Defense", label: "Defense", icon: "/icons/roles/Icon_Defense.webp" },
 ]
 
 interface AgentGridProps {
@@ -41,17 +41,17 @@ interface AgentGridProps {
 
 export function AgentGrid({ agents }: AgentGridProps) {
   const { isOwned, toggleAgent, roster } = useRoster()
-  const [element,   setElement]   = useState<ElementFilter>("All")
+  const [element, setElement] = useState<ElementFilter>("All")
   const [specialty, setSpecialty] = useState<SpecialtyFilter>("All")
-  const [rarity,    setRarity]    = useState<RarityFilter>("All")
+  const [rarity, setRarity] = useState<RarityFilter>("All")
   const [showOwnedOnly, setShowOwnedOnly] = useState(false)
 
   const filtered = useMemo(() => {
     return agents.filter((a) => {
-      if (element   !== "All" && a.element   !== element)   return false
+      if (element !== "All" && a.element !== element) return false
       if (specialty !== "All" && a.specialty !== specialty) return false
-      if (rarity    !== "All" && a.rarity    !== rarity)    return false
-      if (showOwnedOnly && !isOwned(a.id))                  return false
+      if (rarity !== "All" && a.rarity !== rarity) return false
+      if (showOwnedOnly && !isOwned(a.id)) return false
       return true
     })
   }, [agents, element, specialty, rarity, showOwnedOnly, isOwned])
@@ -116,17 +116,17 @@ export function AgentGrid({ agents }: AgentGridProps) {
             <PillButton
               active={rarity === "S"}
               activeColor="#FF5A1F"
+              title="S-Rank"
+              iconSrc="/icons/ranks/Icon_AgentRank_S.webp"
               onClick={() => setRarity(rarity === "S" ? "All" : "S")}
-            >
-              S
-            </PillButton>
+            />
             <PillButton
               active={rarity === "A"}
               activeColor="#9b59b6"
+              title="A-Rank"
+              iconSrc="/icons/ranks/Icon_AgentRank_A.webp"
               onClick={() => setRarity(rarity === "A" ? "All" : "A")}
-            >
-              A
-            </PillButton>
+            />
           </div>
 
           <PillDivider />
@@ -137,10 +137,11 @@ export function AgentGrid({ agents }: AgentGridProps) {
               <PillButton
                 key={s.value}
                 active={specialty === s.value}
+                activeColor="#EDEFF5"
+                title={s.label}
+                iconSrc={s.icon}
                 onClick={() => setSpecialty(specialty === s.value ? "All" : s.value)}
-              >
-                {s.label}
-              </PillButton>
+              />
             ))}
           </div>
 
@@ -153,10 +154,10 @@ export function AgentGrid({ agents }: AgentGridProps) {
                 key={el.value}
                 active={element === el.value}
                 activeColor={ELEMENT_COLORS[el.value]}
+                title={el.label}
+                iconSrc={el.icon}
                 onClick={() => setElement(element === el.value ? "All" : el.value)}
-              >
-                {el.label}
-              </PillButton>
+              />
             ))}
           </div>
         </div>
@@ -203,28 +204,58 @@ interface PillButtonProps {
   active: boolean
   activeColor?: string
   onClick: () => void
-  children: React.ReactNode
+  children?: React.ReactNode
+  title?: string
+  iconSrc?: string
 }
 
-function PillButton({ active, activeColor = "var(--brand)", onClick, children }: PillButtonProps) {
+function PillButton({ active, activeColor = "var(--brand)", onClick, children, title, iconSrc }: PillButtonProps) {
+  const [hovered, setHovered] = useState(false)
+
+  const imgFilter = active || hovered ? "none" : "brightness(0.55)"
+  const imgScale = hovered ? "scale(0.92)" : "scale(1)"
+
   return (
     <button
       onClick={onClick}
-      className="flex-shrink-0 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em]"
+      title={title}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="flex-shrink-0 flex items-center justify-center"
       style={{
+        padding: iconSrc ? "4px 6px" : "4px 8px",
         fontFamily: "var(--font-display)",
+        fontSize: "9px",
+        fontWeight: 900,
+        textTransform: "uppercase",
+        letterSpacing: "0.12em",
         borderRadius: "999px",
-        backgroundColor: active
-          ? `color-mix(in srgb, ${activeColor} 15%, transparent)`
-          : "transparent",
+        backgroundColor: "transparent",
         color: active ? activeColor : "var(--muted)",
-        border: `1px solid ${active ? `color-mix(in srgb, ${activeColor} 45%, transparent)` : "transparent"}`,
-        boxShadow: active ? `0 0 10px color-mix(in srgb, ${activeColor} 30%, transparent)` : "none",
+        border: "1px solid transparent",
+        boxShadow: "none",
         transition: "all 0.15s ease",
         whiteSpace: "nowrap",
+        cursor: "pointer",
       }}
     >
-      {children}
+      {iconSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={iconSrc}
+          alt={title}
+          width={28}
+          height={28}
+          style={{
+            display: "block",
+            filter: imgFilter,
+            transform: imgScale,
+            transition: "filter 0.15s ease, transform 0.15s ease",
+          }}
+        />
+      ) : (
+        children
+      )}
     </button>
   )
 }
