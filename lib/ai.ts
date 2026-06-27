@@ -9,14 +9,13 @@ You are an expert on Zenless Zone Zero mechanics with complete knowledge of ever
 The user provides a JSON object with:
 - "agents": 3 agents, each with name, element, specialty, faction, rarity
 - "bangboos": available Bangboos, each with id, name, rarity, description
+- "bangbooResearch": a plain-text recommendation from a web search identifying the best Bangboo for this comp — treat this as authoritative and use it to pick the bangbooId
 
 Rules for the analysis (field "analysis", in Brazilian Portuguese, max 300 words):
-1. Name each agent's specific skills by their in-game names (e.g., "Assalto Frenético da Yanagi", "Cinema de Gelo da Miyabi"). Never say "her skill" or "the ultimate" without naming the skill.
+1. Name each agent's specific skills by their in-game names. Never say "her skill" or "the ultimate" without naming the skill.
 2. Explain the exact kit interaction that makes this comp work — which skill enables which mechanic for which other agent.
 3. For the role of each agent, state it concisely: Main DPS / Trigger / Enabler / Buffer / Support, then justify with the specific mechanic.
-4. For the Bangboo (field "bangbooId"):
-   - First check if any Bangboo in the provided list has a faction synergy bonus matching the agents' factions (e.g., if two agents are "Victoria Housekeeping", pick a Bangboo with Victoria Housekeeping synergy).
-   - State explicitly which faction synergy you are using, or if none applies, which damage-type/specialty synergy justified your pick instead.
+4. For the Bangboo: use the "bangbooResearch" field to select the best bangbooId from the provided list. Mention the Bangboo by name in the analysis and explain the synergy reason from the research.
 5. Rotation: describe the core loop in 2–3 steps, naming the specific skills.
 6. Never give generic advice that is not grounded in the specific kit data of these agents.
 
@@ -42,10 +41,32 @@ The "recommendation" field must be in Brazilian Portuguese: explain the main W-E
 All IDs must come from the provided lists. Pick W-Engines suited to the agent's specialty. If no list is provided, use empty strings.
 `
 
+// Extracts the first complete {...} JSON object from a string.
+// Needed when grounding is active and the model may add text around the JSON.
+function extractJson(text: string): string {
+  const start = text.indexOf("{")
+  const end = text.lastIndexOf("}")
+  if (start === -1 || end === -1 || end < start) throw new Error("No JSON object found in model response")
+  return text.slice(start, end + 1)
+}
+
 type AgentSummary = Pick<Agent, "name" | "element" | "specialty" | "faction" | "rarity">
 type BangbooSummary = Pick<Bangboo, "id" | "name" | "rarity" | "description">
 
 export async function getCompSuggestion(agents: Agent[], bangboos: Bangboo[]): Promise<CompAnalysis> {
+  const agentNames = agents.map((a) => a.name).join(", ")
+  const factions = [...new Set(agents.map((a) => a.faction).filter(Boolean))].join(", ")
+  const bangbooNames = bangboos.map((b) => b.name).join(", ")
+
+  // Step 1: grounded search for Bangboo recommendation (plain text, no JSON constraints)
+  const searchResponse = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: `In Zenless Zone Zero, what is the single best Bangboo for a team with ${agentNames}${factions ? ` (factions: ${factions})` : ""}? The available Bangboos are: ${bangbooNames}. Name the best one and explain the faction or damage synergy in one sentence.`,
+    config: { tools: [{ googleSearch: {} }] },
+  })
+  const bangbooResearch = searchResponse.text ?? ""
+
+  // Step 2: structured JSON analysis with the research result injected as context
   const payload = {
     agents: agents.map(({ name, element, specialty, faction, rarity }): AgentSummary => ({
       name, element, specialty, faction, rarity,
@@ -53,6 +74,7 @@ export async function getCompSuggestion(agents: Agent[], bangboos: Bangboo[]): P
     bangboos: bangboos.map(({ id, name, rarity, description }): BangbooSummary => ({
       id, name, rarity, description,
     })),
+    bangbooResearch,
   }
 
   const response = await ai.models.generateContent({
@@ -62,7 +84,7 @@ export async function getCompSuggestion(agents: Agent[], bangboos: Bangboo[]): P
   })
 
   const text = response.text ?? ""
-  const parsed = JSON.parse(text) as { analysis?: string; bangbooId?: string }
+  const parsed = JSON.parse(extractJson(text)) as { analysis?: string; bangbooId?: string }
   return {
     analysis: parsed.analysis ?? text,
     bangbooId: parsed.bangbooId ?? "",
@@ -95,7 +117,7 @@ export async function getBuildSuggestion(
   })
 
   const text = response.text ?? ""
-  const parsed = JSON.parse(text) as Partial<BuildAnalysis>
+  const parsed = JSON.parse(extractJson(text)) as Partial<BuildAnalysis>
   return {
     recommendation: parsed.recommendation ?? text,
     wEngineId: parsed.wEngineId ?? "",
