@@ -13,22 +13,73 @@ export default async function CompBuilderPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-          Comp Builder
+      {/* Chassis page header */}
+      <div style={{ marginBottom: "32px" }}>
+        <span
+          style={{
+            display: "block",
+            fontFamily: "var(--font-mono)",
+            fontSize: "8px",
+            letterSpacing: "0.14em",
+            color: "var(--muted)",
+            opacity: 0.5,
+            marginBottom: "6px",
+          }}
+        >
+          {"// COMP.BUILDER"}
+        </span>
+        <h1
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: "1.5rem",
+            fontWeight: 700,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: "var(--fg)",
+            animation: "crt-flicker 8s ease-in-out infinite",
+          }}
+        >
+          COMP BUILDER
         </h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
+        <p
+          style={{
+            marginTop: "6px",
+            fontSize: "0.8rem",
+            color: "var(--muted)",
+            fontFamily: "var(--font-body)",
+          }}
+        >
           Selecione 3 agentes e receba uma análise de composição com IA.
         </p>
+        <div
+          style={{
+            marginTop: "14px",
+            height: "1px",
+            background:
+              "linear-gradient(90deg, var(--brand) 0%, rgba(242,255,73,0.15) 40%, transparent 70%)",
+          }}
+        />
       </div>
 
       {agents.length === 0 ? (
         <div
-          className="rounded-xl border p-12 text-center"
-          style={{ borderColor: "var(--border)", backgroundColor: "var(--bg-card)" }}
+          style={{
+            border: "1px solid var(--line)",
+            borderLeft: "2px solid var(--line)",
+            backgroundColor: "var(--surface)",
+            padding: "48px",
+            textAlign: "center",
+          }}
         >
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            Não foi possível carregar os agentes. Verifique sua conexão e tente novamente.
+          <p
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "11px",
+              color: "var(--muted)",
+              letterSpacing: "0.06em",
+            }}
+          >
+            {">"} ERR: Não foi possível carregar os agentes. Verifique sua conexão.
           </p>
         </div>
       ) : (

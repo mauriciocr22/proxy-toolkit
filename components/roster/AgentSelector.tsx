@@ -4,13 +4,13 @@ import { useState, useMemo } from "react"
 import type { Agent } from "@/types/zzz"
 import { useRoster } from "@/hooks/useRoster"
 
-const ELEMENT_COLORS: Record<Agent["element"], string> = {
-  Fire: "#ef4444",
-  Ice: "#38bdf8",
-  Electric: "#a855f7",
-  Physical: "#94a3b8",
-  Ether: "#34d399",
-  Wind: "#4ade80",
+const ELEMENT_HEX: Record<Agent["element"], string> = {
+  Fire:     "#FF4D3D",
+  Ice:      "#5FD0FF",
+  Electric: "#4D7BFF",
+  Physical: "#F7D94C",
+  Ether:    "#FF4DB8",
+  Wind:     "#4DFFB8",
 }
 
 interface AgentSelectorProps {
@@ -41,33 +41,52 @@ export function AgentSelector({ agents, isSelected, isFull, onToggle }: AgentSel
 
   return (
     <div>
-      <div className="mb-3 flex items-center gap-3">
+      {/* Toggle buttons */}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
         <button
           onClick={() => setShowAll(false)}
-          className="rounded-md px-3 py-1 text-xs font-medium transition-colors"
           style={{
-            backgroundColor: !showAll ? "var(--accent-yellow)" : "var(--bg-elevated)",
-            color: !showAll ? "#000" : "var(--text-secondary)",
+            padding: "5px 14px",
+            backgroundColor: !showAll ? "var(--brand)" : "var(--surface-2)",
+            color: !showAll ? "#000" : "var(--muted)",
+            fontFamily: "var(--font-display)",
+            fontSize: "0.65rem",
+            fontWeight: !showAll ? 700 : 400,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            border: !showAll ? "none" : "1px solid var(--line)",
+            cursor: "pointer",
+            clipPath: "polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%)",
+            transition: "background-color 0.15s ease, color 0.15s ease",
           }}
         >
-          Meu Roster ({ownedCount})
+          ROSTER ({ownedCount})
         </button>
         <button
           onClick={() => setShowAll(true)}
-          className="rounded-md px-3 py-1 text-xs font-medium transition-colors"
           style={{
-            backgroundColor: showAll ? "var(--accent-yellow)" : "var(--bg-elevated)",
-            color: showAll ? "#000" : "var(--text-secondary)",
+            padding: "5px 14px",
+            backgroundColor: showAll ? "var(--brand)" : "var(--surface-2)",
+            color: showAll ? "#000" : "var(--muted)",
+            fontFamily: "var(--font-display)",
+            fontSize: "0.65rem",
+            fontWeight: showAll ? 700 : 400,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            border: showAll ? "none" : "1px solid var(--line)",
+            cursor: "pointer",
+            clipPath: "polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%)",
+            transition: "background-color 0.15s ease, color 0.15s ease",
           }}
         >
-          Todos os Agentes
+          TODOS
         </button>
       </div>
 
       {displayed.length === 0 ? (
-        <p className="py-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>
-          Nenhum agente no seu roster.{" "}
-          <a href="/roster" className="underline" style={{ color: "var(--accent-yellow)" }}>
+        <p style={{ padding: "32px 0", textAlign: "center", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--muted)", letterSpacing: "0.06em" }}>
+          {">"} Nenhum agente no roster.{" "}
+          <a href="/roster" style={{ color: "var(--brand)", textDecoration: "underline" }}>
             Adicione agentes
           </a>{" "}
           primeiro.
@@ -77,23 +96,33 @@ export function AgentSelector({ agents, isSelected, isFull, onToggle }: AgentSel
           {displayed.map((agent) => {
             const selected = isSelected(agent.id)
             const disabled = isFull && !selected
+            const elColor = ELEMENT_HEX[agent.element]
 
             return (
               <button
                 key={agent.id}
                 onClick={() => onToggle(agent.id)}
                 disabled={disabled}
-                className="flex flex-col items-center rounded-xl border-2 p-2 text-center transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-30"
+                className="flex flex-col items-center p-2 text-center transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-30"
                 style={{
-                  borderColor: selected ? "var(--accent-yellow)" : "var(--border)",
-                  backgroundColor: selected ? "rgba(245,196,0,0.1)" : "var(--bg-card)",
+                  border: selected ? `2px solid var(--brand)` : "1px solid var(--line)",
+                  backgroundColor: selected ? "rgba(242,255,73,0.08)" : "var(--surface)",
+                  clipPath: "polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%)",
+                  boxShadow: selected ? "0 0 10px rgba(242,255,73,0.2)" : "none",
+                  transition: "border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease",
                 }}
                 aria-pressed={selected}
                 aria-label={agent.name}
               >
                 <div
-                  className="mb-1 h-12 w-12 overflow-hidden rounded-lg"
-                  style={{ backgroundColor: "var(--bg-base)" }}
+                  style={{
+                    marginBottom: "4px",
+                    width: "48px",
+                    height: "48px",
+                    overflow: "hidden",
+                    backgroundColor: "var(--bg)",
+                    clipPath: "polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%)",
+                  }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -105,12 +134,28 @@ export function AgentSelector({ agents, isSelected, isFull, onToggle }: AgentSel
                     }}
                   />
                 </div>
-                <span className="w-full truncate text-[10px] font-medium" style={{ color: "var(--text-primary)" }}>
+                <span
+                  className="w-full truncate"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "9px",
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color: "var(--fg)",
+                  }}
+                >
                   {agent.name}
                 </span>
                 <span
-                  className="mt-0.5 rounded px-1 py-px text-[9px] font-medium text-black"
-                  style={{ backgroundColor: ELEMENT_COLORS[agent.element] }}
+                  style={{
+                    marginTop: "2px",
+                    padding: "1px 5px",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "8px",
+                    color: elColor,
+                    backgroundColor: `${elColor}18`,
+                    border: `1px solid ${elColor}44`,
+                  }}
                 >
                   {agent.element}
                 </span>

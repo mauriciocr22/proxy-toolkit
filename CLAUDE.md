@@ -309,7 +309,7 @@ Redesign of the visual layer to match the "HDD/chassis" direction in [docs/desig
 - [x] 2. AgentCard — parallelogram shape, attribute hover glow, rarity badge
 - [x] 3. Roster page — hex texture header, pill filter bar, responsive grid
 - [x] 4. Nav — styled logo, chassis micro-details
-- [ ] 5. Comp Builder — diagonal team slots, terminal-style AI analysis panel
+- [x] 5. Comp Builder — diagonal team slots, terminal-style AI analysis panel
 
 ---
 
