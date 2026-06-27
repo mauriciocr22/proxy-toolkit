@@ -50,8 +50,14 @@ proxy-toolkit/
 │   └── useComp.ts               # Comp-in-progress state
 ├── types/
 │   └── zzz.ts                   # All ZZZ domain types
+├── docs/
+│   ├── design.md                # Full design direction and rationale
+│   └── *.png                    # Visual references (agent-card, agents-grid, filter-bar, agent-page)
 └── public/
-    └── (static assets if needed)
+    └── icons/
+        ├── elements/            # Icon_Fire.webp, Icon_Ice.webp, Icon_Electric.webp, …
+        ├── roles/               # Icon_Attack.webp, Icon_Stun.webp, Icon_Anomaly.webp, …
+        └── ranks/               # Icon_AgentRank_S.webp, Icon_AgentRank_A.webp
 ```
 
 ---
@@ -148,6 +154,22 @@ The UI is an **old-futuristic physical device** (HDD, cassette, CRT). Every elem
 - **Hover:** diagonal clip-path reveal in the attribute color — not a standard opacity fade.
 - **Neon glow:** `box-shadow` in the attribute color on hover; subtle scanline overlay on cards.
 - **Page load:** staggered entry (animation-delay per card) + brief CRT-flicker on section titles.
+
+### Icon Assets
+
+Local ZZZ icons live under `public/icons/` in three subfolders:
+
+| Folder       | Files                                          | Used for                          |
+|--------------|------------------------------------------------|-----------------------------------|
+| `elements/`  | `Icon_<Element>.webp`                          | Element badges and filter pills   |
+| `roles/`     | `Icon_<Specialty>.webp`                        | Specialty filter pills            |
+| `ranks/`     | `Icon_AgentRank_S.webp`, `Icon_AgentRank_A.webp` | Rarity badges and filter pills |
+
+Usage pattern for interactive icon buttons:
+- **Inactive:** `filter: brightness(0.55)` — colors visible but dimmed
+- **Active / selected:** `filter: none` — full brightness
+- **Hover:** `filter: none` + `transform: scale(0.88)` — full brightness, slight shrink
+- Role icons use `activeColor: "#EDEFF5"` (neutral white glow) since the icons are white
 
 ### Pitfalls
 
